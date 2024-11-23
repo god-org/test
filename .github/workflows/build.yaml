@@ -47,6 +47,12 @@ jobs:
           git clone -b $REPO_BRANCH --single-branch --depth=1 $REPO_URL openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
+      - name: Update & Install feeds
+        working-directory: ./openwrt
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
       - name: Load custom config
         run: |
           [ -e $FILES ] && mv $FILES openwrt/files
@@ -54,12 +60,6 @@ jobs:
           chmod +x $DIY_SH
           cd openwrt
           $GITHUB_WORKSPACE/$DIY_SH
-
-      - name: Update & Install feeds
-        working-directory: ./openwrt
-        run: |
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
 
       - name: SSH connect to Actions
         if: ${{ (github.event.inputs.ssh == 'true') || contains(github.event.action, 'ssh') }}
