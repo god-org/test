@@ -66,7 +66,7 @@ jobs:
             echo "| $record |" >> $output_file
           done
 
-          ls "logs/mirrors-*.md" | sort | head -n -30 | xargs rm
+          ls "logs" | sort | head -n -30 | xargs rm
 
           cp -af "$output_file" "README.md"
 
