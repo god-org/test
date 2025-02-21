@@ -1,0 +1,85 @@
+name: Fork
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TZ: Asia/Shanghai
+
+jobs:
+  fork:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Sync a fork branch with the upstream repository
+        run: |
+          echo "TIME: $(date +%Y-%m-%d\ %H:%M:%S)"
+
+          repositories=$(cat docs/repositories.json | jq -c '.[]')
+
+          success_repos=()
+          failed_repos=()
+
+          for repo in $repositories; do
+            repository=$(echo $repo | jq -r '.repository')
+            branch=$(echo $repo | jq -r '.branch')
+
+            echo "Syncing $repository on branch $branch"
+
+            if [[ "$repository" == "zzzzzzqqq8"* ]]; then
+              token=${{ secrets.ZZQ_TOKEN }}
+            elif [[ "$repository" == "dog-org"* ]]; then
+              token=${{ secrets.DOG_TOKEN }}
+            else
+              echo "Unknown repository: $repository" >&2
+              failed_repos+=("$repository on branch $branch (Unknown repository)")
+              continue
+            fi
+
+            response=$(curl -Lso /tmp/response.json -w "%{http_code}" \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $token" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/$repository/merge-upstream \
+              -d "{\"branch\":\"$branch\"}")
+
+            if [ "$response" -eq 200 ]; then
+              echo "Sync successful for $repository on branch $branch"
+              cat /tmp/response.json
+              success_repos+=("$repository on branch $branch")
+            else
+              echo "Sync failed for $repository on branch $branch with status code $response" >&2
+              cat /tmp/response.json >&2
+              failed_repos+=("$repository on branch $branch")
+            fi
+          done
+
+          echo "Summary of sync results:"
+          echo "----------------------------------------"
+
+          echo "Successful repositories: ${#success_repos[@]}"
+          if [ ${#success_repos[@]} -gt 0 ]; then
+            for repo in "${success_repos[@]}"; do
+              echo "  - $repo"
+            done
+          fi
+
+          echo "Failed repositories: ${#failed_repos[@]}"
+          if [ ${#failed_repos[@]} -gt 0 ]; then
+            for repo in "${failed_repos[@]}"; do
+              echo "  - $repo" >&2
+            done
+          fi
+
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          retain_days: 0
+          keep_minimum_runs: 1

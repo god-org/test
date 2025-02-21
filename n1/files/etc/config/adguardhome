@@ -1,5 +1,0 @@
-
-config adguardhome 'config'
-	option enabled '1'
-	option workdir '/mnt/mmcblk2p4/adguardhome'
-
