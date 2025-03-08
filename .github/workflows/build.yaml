@@ -26,8 +26,8 @@ jobs:
       - name: checkout
         uses: actions/checkout@main
 
-      #- name: Free up space
-      #  uses: jlumbroso/free-disk-space@main
+      - name: Free up space
+        uses: jlumbroso/free-disk-space@main
 
       - name: Initialize environment
         env:
@@ -86,8 +86,6 @@ jobs:
         uses: unifreq/openwrt_packit@master
         env:
           OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
-          KERNEL_VERSION_NAME: 6.6.52
-          KERNEL_AUTO_LATEST: false
           PACKAGE_SOC: diy
           GZIP_IMGS: .xz
           SCRIPT_DIY_PATH: n1/mk_s905d_n1.sh
