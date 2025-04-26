@@ -21,7 +21,7 @@
 
 - [immortalwrt/immortalwrt](https://github.com/immortalwrt/immortalwrt/tree/openwrt-24.10)
 - [unifreq/openwrt_packit](https://github.com/unifreq/openwrt_packit)
-- [breakingbadboy/OpenWrt](https://github.com/breakingbadboy/OpenWrt/releases/tag/kernel_stable)
 - [ophub/kernel](https://github.com/ophub/kernel/releases/tag/kernel_flippy)
+- [breakingbadboy/OpenWrt](https://github.com/breakingbadboy/OpenWrt/releases/tag/kernel_stable)
 - [nantayo/N1-OpenWrt](https://github.com/nantayo/N1-OpenWrt)
 - [恩山论坛帖子](https://www.right.com.cn/forum/thread-4076037-1-1.html)
