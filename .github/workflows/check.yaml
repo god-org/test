@@ -38,7 +38,7 @@ jobs:
 
       - name: Invoke workflow
         if: ${{ steps.cacheVersions.outputs.cache-hit != 'true' }}
-        run: gh workflow run Build
+        run: gh workflow run Build --repo ${{ github.repository }}
 
       - name: Delete old workflow runs
         uses: Mattraks/delete-workflow-runs@v2
