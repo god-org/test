@@ -1,6 +1,6 @@
 FROM alpine AS builder
 
-ARG TARGETPLATFORM SING_BOX_VERSION CLOUDFLARED_VERSION
+ARG TARGETARCH SING_BOX_VERSION CLOUDFLARED_VERSION
 
 RUN set -ex &&
     apk --no-cache upgrade &&
@@ -19,6 +19,6 @@ RUN set -ex &&
 FROM alpine AS dist
 
 COPY entrypoint.sh /entrypoint.sh
-COPY --from=builder local /usr/local/bin
+COPY --from=builder /local/bin /usr/local/bin
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
