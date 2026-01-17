@@ -127,7 +127,7 @@ jobs:
           fi
 
       - name: Upload to repository
-        uses: stefanzweifel/git-auto-commit-action@v1
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: ${{ env.COMMIT }}
 
