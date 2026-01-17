@@ -2,10 +2,11 @@ FROM alpine AS builder
 
 ARG TARGETARCH SING_BOX_VERSION CLOUDFLARED_VERSION
 
+WORKDIR /tmp
+
 RUN set -ex \
     && apk --no-cache upgrade \
     && apk --no-cache add --virtual build-dependencies wget tar ca-certificates \
-    && cd /tmp \
     && mkdir -p /local/bin \
     && wget -qO sing-box.tar.gz "https://github.com/SagerNet/sing-box/releases/download/${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION#v}-linux-${TARGETARCH}.tar.gz" \
     && tar -xzf sing-box.tar.gz \
@@ -18,7 +19,9 @@ RUN set -ex \
 
 FROM alpine AS dist
 
-COPY entrypoint.sh /entrypoint.sh
+WORKDIR /app
+
 COPY --from=builder /local/bin /usr/local/bin
+COPY entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

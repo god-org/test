@@ -119,11 +119,11 @@ jobs:
       - name: Check and Mark
         run: |
           if [ "${{ env.SING_BOX_NEXT_RENEW }}" == '1' ]; then
-            sed -i "s/\(sing-box.*:\).*/\1 ${{ env.SING_BOX_NEXT_NEW }}/" README.md
+            sed -i "s/\(\*\*sing-box\*\*:\).*/\1 ${{ env.SING_BOX_NEXT_NEW }}/" README.md
           fi
 
           if [ "${{ env.CLOUDFLARED_NEXT_RENEW }}" == '1' ]; then
-            sed -i "s/\(cloudflared.*:\).*/\1 ${{ env.CLOUDFLARED_NEXT_NEW }}/" README.md
+            sed -i "s/\(\*\*cloudflared\*\*:\).*/\1 ${{ env.CLOUDFLARED_NEXT_NEW }}/"
           fi
 
       - name: Upload to repository
