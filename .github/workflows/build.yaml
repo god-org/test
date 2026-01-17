@@ -131,10 +131,8 @@ jobs:
         with:
           commit_message: ${{ env.COMMIT }}
 
-      - name: Delete Package Versions
-        uses: actions/delete-package-versions@v5
+      - name: ghcr.io cleanup action
+        uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          package-name: "test"
-          package-type: "container"
-          min-versions-to-keep: 3
-          delete-only-untagged-versions: "true"
+          keep-n-untagged: 0
+          keep-n-tagged: 1
