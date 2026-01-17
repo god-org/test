@@ -123,7 +123,7 @@ jobs:
           fi
 
           if [ "${{ env.CLOUDFLARED_NEXT_RENEW }}" == '1' ]; then
-            sed -i "s/\(\*\*cloudflared\*\*:\).*/\1 ${{ env.CLOUDFLARED_NEXT_NEW }}/"
+            sed -i "s/\(\*\*cloudflared\*\*:\).*/\1 ${{ env.CLOUDFLARED_NEXT_NEW }}/" README.md
           fi
 
       - name: Upload to repository
