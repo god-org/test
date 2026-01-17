@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@main
+        uses: actions/checkout@v6
 
       - name: Check version
         id: get-version
@@ -112,7 +112,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -127,6 +127,13 @@ jobs:
           fi
 
       - name: Upload to repository
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: ${{ env.COMMIT }}
+
+      - name: Delete Package Versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: "test"
+          package-type: "container"
+          min-versions-to-keep: 1
