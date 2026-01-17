@@ -7,5 +7,5 @@
 
 # 致谢
 
-- [sing-box](https: v1.12.17
+- [sing-box](https://github.com/sagernet/sing-box)
 - [Cloudflare Tunnel client](https://github.com/cloudflare/cloudflared)
