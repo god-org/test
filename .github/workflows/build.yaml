@@ -136,4 +136,5 @@ jobs:
         with:
           package-name: "test"
           package-type: "container"
-          min-versions-to-keep: 1
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: "true"
