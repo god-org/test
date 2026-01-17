@@ -25,7 +25,7 @@ jobs:
 
       - name: Compare Release Versions
         id: cacheVersions
-        uses: actions/cache@v5
+        uses: actions/cache@v1
         with:
           path: .releaseVersions
           key: releaseVersions_${{ steps.getVersion.outputs.sing-box_next }}_${{ steps.getVersion.outputs.cloudflared_next }}
@@ -41,7 +41,7 @@ jobs:
         run: gh workflow run Build -R ${{ github.repository }}
 
       - name: Delete old workflow runs
-        uses: Mattraks/delete-workflow-runs@v2
+        uses: Mattraks/delete-workflow-runs@v1
         with:
           retain_days: 0
           keep_minimum_runs: 1
