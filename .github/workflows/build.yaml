@@ -23,7 +23,7 @@ jobs:
           format: html
           message: |
             <b>🚀 项目自动化构建报告</b>
-            <hr>
+
             <b>📦 项目信息</b>
             名称: <code>${{ github.repository }}</code>
             版本: <code>${{ env.QBT_VERSION }}</code>
