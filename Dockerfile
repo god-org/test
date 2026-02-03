@@ -13,7 +13,7 @@ RUN set -ex \
     && make -j$(nproc) install \
     && ldd /usr/bin/qbittorrent-nox | sort -f \
     && apk del --purge build-dependencies \
-    && rm -rf /tmp/* /tmp/.* /var/cache/apk/* /var/cache/apk/.*
+    && rm -rf /tmp/* /tmp/.[!.]* /var/cache/apk/* /var/cache/apk/.[!.]*
 FROM alpine:3.10 AS dist
 RUN set -ex \
     && apk --no-cache upgrade \
