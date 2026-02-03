@@ -6,38 +6,32 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   TZ: Asia/Shanghai
+  LIBBT_VERSION: RC_1_1
+  QBT_VERSION: v4_1_x
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 配置 QEMU 跨架构支持
-        uses: docker/setup-qemu-action@v3
-
-      - name: 配置 Docker Buildx 构建工具
-        uses: docker/setup-buildx-action@v3
-
-      - name: 登录 GHCR 镜像仓库
-        uses: docker/login-action@v3
+      - name: send telegram message
+        uses: appleboy/telegram-action@master
+        if: always()
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: html
+          message: |
+            <b>🚀 自动化构建报告</b>
 
-      - name: 构建并推送 Docker 镜像
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          platforms: linux/amd64, linux/arm64
-          build-args: |
-            LIBBT_BRANCH=${{ env.LIBBT_VERSION }}
-            QBT_BRANCH=${{ env.QBT_VERSION }}
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ env.QBT_VERSION }}
-            ghcr.io/${{ github.repository }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-        env:
-          LIBBT_VERSION: RC_1_1
-          QBT_VERSION: v4_1_x
+            <b>项目名称:</b> <code>${{ github.repository }}</code>
+            <b>构建状态:</b> ${{ job.status == 'success' && '✅ 成功' || '❌ 失败' }}
+            <b>当前版本:</b> <code>${{ env.QBT_VERSION }}</code>
+
+            <b>代码提交信息:</b>
+            👤 作者: ${{ github.actor }}
+            📝 描述: <i>触发方式: ${{ github.event_name }} (操作者: ${{ github.actor }})</i>
+
+            <b>详情链接:</b>
+            🔗 <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">查看构建日志</a>
+            🛠️ <a href="https://github.com/${{ github.repository }}/commit/${{ github.sha }}">查看代码变更</a>
