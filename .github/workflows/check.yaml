@@ -1,11 +1,11 @@
 name: Check
 
 on:
-  schedule:
-    - cron: "0 0 * * *"
   workflow_dispatch:
 
 env:
+  REPO_URL: https://github.com/qbittorrent/qBittorrent
+  REPO_BRANCH: v4_1_x
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   TZ: Asia/Shanghai
 
@@ -14,34 +14,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get Release Version
-        id: getVersion
+      - name: 检出当前仓库代码
+        uses: actions/checkout@v6
+
+      - name: 获取远程最新提交哈希
+        id: getHash
         run: |
-          SING_BOX_VER=$(curl -fsSL -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/SagerNet/sing-box/releases" | jq -r 'map(select(.prerelease==false)) | .[].tag_name' | head -n 1)
-          CLOUDFLARED_VER=$(curl -fsSL -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/cloudflare/cloudflared/releases" | jq -r 'map(select(.prerelease==false)) | .[].tag_name' | head -n 1)
+          hash=$(git ls-remote $REPO_URL $REPO_BRANCH | awk '{print $1}')
+          echo "commitHash=$hash" >> $GITHUB_OUTPUT
 
-          echo "sing-box_next=$SING_BOX_VER" >> $GITHUB_OUTPUT
-          echo "cloudflared_next=$CLOUDFLARED_VER" >> $GITHUB_OUTPUT
-
-      - name: Compare Release Versions
-        id: cacheVersions
+      - name: 对比提交哈希（缓存校验）
+        id: cacheHash
         uses: actions/cache@v5
         with:
-          path: .releaseVersions
-          key: releaseVersions_${{ steps.getVersion.outputs.sing-box_next }}_${{ steps.getVersion.outputs.cloudflared_next }}
+          path: .commitHash
+          key: commitHash_${{ steps.getHash.outputs.commitHash }}
 
-      - name: Save New Release Versions
-        if: ${{ steps.cacheVersions.outputs.cache-hit != 'true' }}
+      - name: 保存新的提交哈希到文件
+        if: steps.cacheHash.outputs.cache-hit != 'true'
         run: |
-          echo ${{ steps.getVersion.outputs.sing-box_next }} | tee .releaseVersions
-          echo ${{ steps.getVersion.outputs.cloudflared_next }} | tee -a .releaseVersions
+          echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
 
-      - name: Invoke workflow
-        if: ${{ steps.cacheVersions.outputs.cache-hit != 'true' }}
-        run: gh workflow run Build -R ${{ github.repository }}
-
-      - name: Delete old workflow runs
-        uses: Mattraks/delete-workflow-runs@v2
-        with:
-          retain_days: 0
-          keep_minimum_runs: 1
+      - name: 触发构建工作流
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        run: gh workflow run Build

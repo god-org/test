@@ -14,12 +14,12 @@ env:
 jobs:
   merge:
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
 
     steps:
-      - name: Dependabot metadata
-        id: dependabot-metadata
+      - name: 获取 Dependabot 元数据
+        id: metadata
         uses: dependabot/fetch-metadata@v2
 
-      - name: Enable auto-merge for Dependabot PRs
+      - name: 自动合并 Dependabot 的 PR
         run: gh pr merge --auto --merge "${{github.event.pull_request.html_url}}"

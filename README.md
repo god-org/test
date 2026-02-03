@@ -1,11 +1,7 @@
-# 版本
-
-- ### **sing-box**: v1.12.17
-- ### **cloudflared**: 2025.11.1
-
----
-
 # 致谢
 
-- [sing-box](https://github.com/sagernet/sing-box)
-- [Cloudflare Tunnel client](https://github.com/cloudflare/cloudflared)
+- [qbittorrent/qBittorrent](https://github.com/qbittorrent/qBittorrent)
+- [qbittorrent/docker-qbittorrent-nox](https://github.com/qbittorrent/docker-qbittorrent-nox)
+- [ttys3/docker-qbittorrent](https://github.com/ttys3/docker-qbittorrent)
+- [emmercm/docker-libtorrent](https://github.com/emmercm/docker-libtorrent)
+- [emmercm/docker-qbittorrent](https://github.com/emmercm/docker-qbittorrent)
