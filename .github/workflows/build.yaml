@@ -22,21 +22,21 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           format: html
           message: |
-            <b>🚀 项目自动化构建报告</b>
+            <b>🚀 构建报告</b>
 
             <b>📦 项目信息</b>
-            名称: <code>${{ github.repository }}</code>
-            版本: <code>${{ env.QBT_VERSION }}</code>
-            分支: <code>${{ github.ref_name }}</code>
-            构建号: <code>#${{ github.run_number }}</code>
+            仓库：<code>${{ github.repository }}</code>
+            分支：<code>${{ github.ref_name }}</code>
+            版本：<code>${{ env.QBT_VERSION }}</code>
+            编号：<code>#${{ github.run_number }}</code>
 
             <b>⚡ 构建状态</b>
             ${{ job.status == 'success' && '✅ 构建成功' || '❌ 构建失败' }}
 
             <b>👤 触发信息</b>
-            操作者: <code>${{ github.actor }}</code>
-            触发方式: <code>${{ github.event_name }}</code>
-            提交哈希: <code>${{ github.sha }}</code>
+            账号：<code>${{ github.actor }}</code>
+            触发：<code>${{ github.event_name }}</code>
+            哈希：<code>${{ github.sha }}</code>
 
             <b>🔗 快速链接</b>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 查看构建日志</a>
