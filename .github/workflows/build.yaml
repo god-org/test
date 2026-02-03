@@ -31,7 +31,7 @@ jobs:
             构建号: <code>#${{ github.run_number }}</code>
 
             <b>⚡ 构建状态</b>
-            ${{ job.status == 'success' && '<span style="color:green">✅ 构建成功</span>' || '<span style="color:red">❌ 构建失败</span>' }}
+            ${{ job.status == 'success' && '✅ 构建成功' || '❌ 构建失败' }}
 
             <b>👤 触发信息</b>
             操作者: <code>${{ github.actor }}</code>
@@ -39,5 +39,5 @@ jobs:
             提交哈希: <code>${{ github.sha }}</code>
 
             <b>🔗 快速链接</b>
-            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 查看完整构建日志</a>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 查看构建日志</a>
             <a href="https://github.com/${{ github.repository }}/commit/${{ github.sha }}">💻 查看代码变更</a>
