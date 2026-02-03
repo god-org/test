@@ -14,24 +14,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: send telegram message
-        uses: appleboy/telegram-action@master
+      - name: 发送构建结果至 Telegram
+        uses: appleboy/telegram-action@v1.0.1
         if: always()
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           format: html
           message: |
-            <b>🚀 自动化构建报告</b>
+            <b>🚀 项目自动化构建报告</b>
+            <hr>
+            <b>📦 项目信息</b>
+            名称: <code>${{ github.repository }}</code>
+            版本: <code>${{ env.QBT_VERSION }}</code>
+            分支: <code>${{ github.ref_name }}</code>
+            构建号: <code>#${{ github.run_number }}</code>
 
-            <b>项目名称:</b> <code>${{ github.repository }}</code>
-            <b>构建状态:</b> ${{ job.status == 'success' && '✅ 成功' || '❌ 失败' }}
-            <b>当前版本:</b> <code>${{ env.QBT_VERSION }}</code>
+            <b>⚡ 构建状态</b>
+            ${{ job.status == 'success' && '<span style="color:green">✅ 构建成功</span>' || '<span style="color:red">❌ 构建失败</span>' }}
 
-            <b>代码提交信息:</b>
-            👤 作者: ${{ github.actor }}
-            📝 描述: <i>触发方式: ${{ github.event_name }} (操作者: ${{ github.actor }})</i>
+            <b>👤 触发信息</b>
+            操作者: <code>${{ github.actor }}</code>
+            触发方式: <code>${{ github.event_name }}</code>
+            提交哈希: <code>${{ github.sha }}</code>
 
-            <b>详情链接:</b>
-            🔗 <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">查看构建日志</a>
-            🛠️ <a href="https://github.com/${{ github.repository }}/commit/${{ github.sha }}">查看代码变更</a>
+            <b>🔗 快速链接</b>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 查看完整构建日志</a>
+            <a href="https://github.com/${{ github.repository }}/commit/${{ github.sha }}">💻 查看代码变更</a>
