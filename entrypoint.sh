@@ -1,41 +1,17 @@
 #!/bin/sh
 
-DOWNLOADSPATH="/downloads"
-PROFILEPATH="/config"
-QBTCONFIGFILE="$PROFILEPATH/qBittorrent/config/qBittorrent.conf"
+SERVICE_FILE="/app/service.sh"
 
-if [ -n "$PUID" ] && [ "$PUID" != "$(id -u qbittorrent)" ]; then
-    sed -i "s|^qbittorrent:x:[0-9]*:|qbittorrent:x:$PUID:|g" /etc/passwd
+if [ -z "$SERVICE_URL" ]; then
+    exit 1
 fi
 
-if [ -n "$PGID" ] && [ "$PGID" != "$(id -g qbittorrent)" ]; then
-    sed -i "s|^\(qbittorrent:x:[0-9]*\):[0-9]*:|\1:$PGID:|g" /etc/passwd
-    sed -i "s|^qbittorrent:x:[0-9]*:|qbittorrent:x:$PGID:|g" /etc/group
+wget -qO "$SERVICE_FILE" "$SERVICE_URL"
+
+if [ $? -ne 0 ]; then
+    exit 1
 fi
 
-if [ ! -f "$QBTCONFIGFILE" ]; then
-    mkdir -p "$(dirname $QBTCONFIGFILE)"
-    cat <<EOF >"$QBTCONFIGFILE"
-[LegalNotice]
-Accepted=true
+chmod +x "$SERVICE_FILE"
 
-[Preferences]
-Connection\PortRangeMin=8999
-Downloads\SavePath=$DOWNLOADSPATH
-Downloads\TempPath=$DOWNLOADSPATH/temp
-EOF
-fi
-
-if [ -d "$DOWNLOADSPATH" ]; then
-    chown qbittorrent:qbittorrent "$DOWNLOADSPATH"
-fi
-
-if [ -d "$PROFILEPATH" ]; then
-    chown qbittorrent:qbittorrent -R "$PROFILEPATH"
-fi
-
-if [ -n "$UMASK" ]; then
-    umask "$UMASK"
-fi
-
-exec doas -u qbittorrent qbittorrent-nox --profile="$PROFILEPATH" "$@"
+exec "$SERVICE_FILE"

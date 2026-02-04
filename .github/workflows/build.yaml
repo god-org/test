@@ -6,14 +6,126 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   TZ: Asia/Shanghai
-  LIBBT_VERSION: RC_1_1
-  QBT_VERSION: v4_1_x
 
 jobs:
-  build:
+  check-version:
     runs-on: ubuntu-latest
+    outputs:
+      sing-box_new: ${{ steps.get-version.outputs.sing-box_new }}
+      sing-box_renew: ${{ steps.get-version.outputs.sing-box_renew }}
+      cloudflared_new: ${{ steps.get-version.outputs.cloudflared_new }}
+      cloudflared_renew: ${{ steps.get-version.outputs.cloudflared_renew }}
+      commit: ${{ steps.get-version.outputs.commit }}
 
     steps:
+      - name: 检出当前仓库代码
+        uses: actions/checkout@v6
+
+      - name: 对比版本
+        id: get-version
+        run: |
+          SING_BOX_NOW=$(awk '/sing-box/{print $NF; exit}' README.md)
+          CLOUDFLARED_NOW=$(awk '/cloudflared/{print $NF; exit}' README.md)
+          SING_BOX_NEW=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/SagerNet/sing-box/releases" | jq -r 'map(select(.prerelease==false)) | first.tag_name')
+          CLOUDFLARED_NEW=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/cloudflare/cloudflared/releases" | jq -r 'map(select(.prerelease==false)) | first.tag_name')
+          echo "SING_BOX_NOW: $SING_BOX_NOW | SING_BOX_NEW: $SING_BOX_NEW"
+          echo "CLOUDFLARED_NOW: $CLOUDFLARED_NOW | CLOUDFLARED_NEW: $CLOUDFLARED_NEW"
+
+          SING_BOX_RENEW=0
+          CLOUDFLARED_RENEW=0
+          if [[ "$SING_BOX_NOW" != "$SING_BOX_NEW" ]]; then
+            SING_BOX_RENEW=1
+          fi
+          if [[ "$CLOUDFLARED_NOW" != "$CLOUDFLARED_NEW" ]]; then
+            CLOUDFLARED_RENEW=1
+          fi
+
+          echo "sing-box_new=$SING_BOX_NEW" >> $GITHUB_OUTPUT
+          echo "sing-box_renew=$SING_BOX_RENEW" >> $GITHUB_OUTPUT
+          echo "cloudflared_new=$CLOUDFLARED_NEW" >> $GITHUB_OUTPUT
+          echo "cloudflared_renew=$CLOUDFLARED_RENEW" >> $GITHUB_OUTPUT
+          DATE=$(date +"%Y-%m-%d %H:%M:%S")
+          if [[ "$SING_BOX_RENEW" == '1' || "$CLOUDFLARED_RENEW" == '1' ]]; then
+            COMMIT="$DATE Build to $SING_BOX_NEW and $CLOUDFLARED_NEW by Github Actions"
+            echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          fi
+
+  # ===========================================================================
+
+  build-image:
+    needs:
+      - check-version
+    runs-on: ubuntu-latest
+    if: needs.check-version.outputs.commit != ''
+    env:
+      SING_BOX_NEW: ${{ needs.check-version.outputs.sing-box_new }}
+      CLOUDFLARED_NEW: ${{ needs.check-version.outputs.cloudflared_new }}
+      NEW: ${{ needs.check-version.outputs.sing-box_new }}_${{ needs.check-version.outputs.cloudflared_new }}
+
+    steps:
+      - name: 配置 QEMU 跨架构支持
+        uses: docker/setup-qemu-action@v3
+
+      - name: 配置 Docker Buildx 构建工具
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GHCR 镜像仓库
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 构建并推送 Docker 镜像
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            SING_BOX_NEW=${{ env.SING_BOX_NEW }}
+            CLOUDFLARED_NEW=${{ env.CLOUDFLARED_NEW }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ env.NEW }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+
+  mark-version:
+    needs:
+      - check-version
+      - build-image
+    runs-on: ubuntu-latest
+    if: needs.build-image.result == 'success' && !cancelled()
+    env:
+      SING_BOX_NEW: ${{ needs.check-version.outputs.sing-box_new }}
+      SING_BOX_RENEW: ${{ needs.check-version.outputs.sing-box_renew }}
+      CLOUDFLARED_NEW: ${{ needs.check-version.outputs.cloudflared_new }}
+      CLOUDFLARED_RENEW: ${{ needs.check-version.outputs.cloudflared_renew }}
+      COMMIT: ${{ needs.check-version.outputs.commit }}
+
+    steps:
+      - name: 检出当前仓库代码
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 检查并更新版本号
+        run: |
+          if [[ "${{ env.SING_BOX_RENEW }}" == '1' ]]; then
+            sed -i "s/\(\*\*sing-box\*\*:\).*/\1 ${{ env.SING_BOX_NEW }}/" README.md
+          fi
+
+          if [[ "${{ env.CLOUDFLARED_RENEW }}" == '1' ]]; then
+            sed -i "s/\(\*\*cloudflared\*\*:\).*/\1 ${{ env.CLOUDFLARED_NEW }}/" README.md
+          fi
+
+      - name: 提交更新至代码仓库
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: ${{ env.COMMIT }}
+
       - name: 发送构建结果至 Telegram
         uses: appleboy/telegram-action@v1.0.1
         if: always()
@@ -22,22 +134,22 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           format: html
           message: |
-            <b>🚀 构建报告</b>
+            <b>🚀 Service 构建报告</b>
+
+            ${{ job.status == 'success' && '✅ 成功' || '❌ 失败' }}
 
             <b>📦 项目信息</b>
             仓库：<code>${{ github.repository }}</code>
             分支：<code>${{ github.ref_name }}</code>
-            版本：<code>${{ env.QBT_VERSION }}</code>
-            编号：<code>#${{ github.run_number }}</code>
-
-            <b>⚡ 构建状态</b>
-            ${{ job.status == 'success' && '✅ 构建成功' || '❌ 构建失败' }}
+            编号：<code>${{ github.run_number }}</code>
+            版本：<code>${{ env.SING_BOX_NEW }}_${{ env.CLOUDFLARED_NEW }}</code>
 
             <b>👤 触发信息</b>
             账号：<code>${{ github.actor }}</code>
             触发：<code>${{ github.event_name }}</code>
             哈希：<code>${{ github.sha }}</code>
+            提交：<code>${{ env.COMMIT }}</code>
 
             <b>🔗 快速链接</b>
-            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 查看构建日志</a>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 查看完整日志</a>
             <a href="https://github.com/${{ github.repository }}/commit/${{ github.sha }}">💻 查看代码变更</a>
