@@ -5,7 +5,7 @@ on:
     inputs:
       debug_enabled:
         type: boolean
-        description: "启用tmate远程调试"
+        description: "启用 tmate 远程调试"
         required: false
         default: false
 
