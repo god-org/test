@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+start() {
+	local target="/root/scripts/cron_runner.sh"
+	if [ -f "$target" ]; then
+		if [ ! -x "$target" ]; then
+			chmod u+x "$target"
+		fi
+		export HOME="/root"
+		export USER="root"
+		cd /root
+		"$target" reboot &
+	fi
+}
