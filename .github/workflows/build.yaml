@@ -31,6 +31,8 @@ jobs:
 
       - name: 清理磁盘释放空间
         uses: BRAINSia/free-disk-space@v2
+        with:
+          docker-images: false
 
       - name: 初始化编译环境
         env:
