@@ -14,7 +14,7 @@ function git_sparse_clone() {
 git clone --single-branch --depth=1 https://github.com/kongfl888/luci-app-adguardhome package/luci-app-adguardhome
 git clone --single-branch --depth=1 https://github.com/ophub/luci-app-amlogic package/luci-app-amlogic
 
-# 修改默认 IP
+# 修改默认地址
 # sed -i 's/192.168.1.1/192.168.1.2/g' package/base-files/files/bin/config_generate
 
 # 修改主机名
