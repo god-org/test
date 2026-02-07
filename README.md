@@ -12,8 +12,6 @@
 - `luci-app-nft-qos`
 - `luci-app-ttyd`
 - `luci-app-uhttpd`
-- `luci-ssl-openssl`
-- `luci-theme-argon`
 
 ---
 
