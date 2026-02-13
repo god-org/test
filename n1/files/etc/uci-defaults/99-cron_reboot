@@ -6,6 +6,7 @@ if [ -f "$TARGET" ]; then
     if [ ! -x "$TARGET" ]; then
         chmod +x "$TARGET"
     fi
+
     "$TARGET" enable
 fi
 

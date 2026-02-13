@@ -8,4 +8,4 @@ if [ "$ACTION" = "ifup" ] && [ "$DEVICE" = "br-lan" ]; then
     fi
 fi
 
-unset RA_FILE
+unset "RA_FILE"
