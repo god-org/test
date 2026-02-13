@@ -10,7 +10,7 @@ start() {
 		fi
 		export HOME="/$owner"
 		export USER="$owner"
-		cd /$owner
+		cd "/$owner"
 		"$target" reboot &
 	fi
 }
