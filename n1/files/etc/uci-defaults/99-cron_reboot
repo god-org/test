@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TARGET="/etc/init.d/reboot_run"
+TARGET="/etc/init.d/cron_reboot"
 
 if [ -f "$TARGET" ]; then
     if [ ! -x "$TARGET" ]; then

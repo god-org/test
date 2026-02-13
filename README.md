@@ -9,7 +9,6 @@
 - `luci-app-ddns-go`
 - `luci-app-dockerman`
 - `luci-app-ksmbd`
-- `luci-app-nft-qos`
 - `luci-app-ttyd`
 - `luci-app-uhttpd`
 

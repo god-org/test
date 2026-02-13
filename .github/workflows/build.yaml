@@ -49,13 +49,17 @@ jobs:
       - name: 克隆源码
         working-directory: /workdir
         run: |
-          git clone -b $REPO_BRANCH --single-branch --depth=1 $REPO_URL openwrt
+          git clone -b $REPO_BRANCH --depth=1 --single-branch $REPO_URL openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-      - name: 更新并安装软件源
+      - name: 更新软件源
         working-directory: ./openwrt
         run: |
           ./scripts/feeds update -a
+
+      - name: 安装软件源
+        working-directory: ./openwrt
+        run: |
           ./scripts/feeds install -a
 
       - name: 加载自定义配置
@@ -88,11 +92,18 @@ jobs:
           echo "RELEASE_TAG=$(date +"%Y%m%d%H%M%S")" >> $GITHUB_ENV
           echo "BUILD_TIME=$(date +"%Y年%m月%d日 %H时%M分%S秒")" >> $GITHUB_ENV
 
+      - name: 上传 ImmortalWrt 编译文件
+        if: env.compile_status == 'success'
+        uses: actions/upload-artifact@v6
+        with:
+          name: ImmortalWrt_${{ env.RELEASE_TAG }}
+          path: openwrt/bin
+
       - name: 打包 ARMSR 架构为 OpenWrt 成品固件
         if: env.compile_status == 'success'
         uses: unifreq/openwrt_packit@master
         env:
-          OPENWRT_ARMVIRT: openwrt/bin/targets/*/*/*.tar.gz
+          OPENWRT_ARMSR: openwrt/bin/targets/*/*/*rootfs.tar.gz
           KERNEL_VERSION_NAME: ${{ env.KERNEL_VER }}
           PACKAGE_SOC: diy
           GZIP_IMGS: .xz
@@ -101,6 +112,7 @@ jobs:
           SW_FLOWOFFLOAD: 0
           SFE_FLOW: 0
           ENABLE_WIFI_K510: 0
+          DISTRIB_DESCRIPTION: ImmortalWrt
 
       - name: 上传固件至 GitHub Release
         if: env.PACKAGED_STATUS == 'success'
@@ -115,7 +127,7 @@ jobs:
             - 🌳 **源码**: [immortalwrt/immortalwrt](${{ env.REPO_URL }})
             - 🌿 **分支**: `${{ env.REPO_BRANCH }}`
             - 📅 **编译时间**: ${{ env.BUILD_TIME }}
-            - 🌏 **默认地址**: `192.168.1.2`
+            - 🌏 **默认地址**: `192.168.1.1`
             - 👤 **默认用户**: `root` / `password`
 
             ---
