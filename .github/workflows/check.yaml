@@ -23,7 +23,7 @@ jobs:
         id: getHash
         run: |
           hash="$(git ls-remote "$REPO_URL" "$REPO_BRANCH" | awk '{print $1}')"
-          echo "commitHash=$hash" >> "$GITHUB_OUTPUT"
+          echo "commitHash=$hash" >>"$GITHUB_OUTPUT"
 
       - name: 对比提交哈希（缓存校验）
         id: cacheHash
