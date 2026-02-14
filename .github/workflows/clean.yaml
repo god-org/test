@@ -8,7 +8,7 @@ env:
   TZ: Asia/Shanghai
 
 jobs:
-  delete:
+  clean:
     runs-on: ubuntu-latest
 
     steps:
