@@ -92,6 +92,7 @@ jobs:
             CLOUDFLARED_NEW=${{ env.CLOUDFLARED_NEW }}
           secrets: |
             ENTRYPOINT_URL=${{ secrets.ENTRYPOINT_URL }}
+            LOCALTIME_URL=${{ secrets.LOCALTIME_URL }}
             NGINX_CONF_URL=${{ secrets.NGINX_CONF_URL }}
             NGINX_40X_HTML_URL=${{ secrets.NGINX_40X_HTML_URL }}
           tags: |

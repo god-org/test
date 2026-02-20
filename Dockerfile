@@ -1,19 +1,35 @@
-FROM alpine
+ARG SING_BOX_NEW=latest CLOUDFLARED_NEW=latest
 
-ARG SING_BOX_NEW=latest CLOUDFLARED_NEW=latest CHMOD=755 CHOWN=1000 NGINX_PORT=8080
-
-COPY --from=ghcr.io/sagernet/sing-box:$SING_BOX_NEW --chmod=$CHMOD --chown=$CHOWN /usr/local/bin/sing-box /usr/local/bin/
-COPY --from=cloudflare/cloudflared:$CLOUDFLARED_NEW --chmod=$CHMOD --chown=$CHOWN /usr/local/bin/cloudflared /usr/local/bin/
+FROM ghcr.io/sagernet/sing-box:$SING_BOX_NEW AS sing-box-src
+FROM cloudflare/cloudflared:$CLOUDFLARED_NEW AS cloudflared-src
+FROM alpine AS alpine-src
 
 RUN --mount=type=secret,env=ENTRYPOINT_URL \
+  --mount=type=secret,env=LOCALTIME_URL \
   --mount=type=secret,env=NGINX_CONF_URL \
   --mount=type=secret,env=NGINX_40X_HTML_URL <<EOF
   set -euo pipefail
+  wget -qO /entrypoint.sh "$ENTRYPOINT_URL"
+  wget -qO /localtime "$LOCALTIME_URL"
+  wget -qO /nginx.conf "$NGINX_CONF_URL"
+  wget -qO /40x.html "$NGINX_40X_HTML_URL"
+EOF
+
+FROM alpine
+
+ARG CHMOD=755 CHOWN=1000 NGINX_PORT=8080
+
+COPY --from=sing-box-src --chmod=$CHMOD /usr/local/bin/sing-box /usr/local/bin/
+COPY --from=cloudflared-src --chmod=$CHMOD /usr/local/bin/cloudflared /usr/local/bin/
+COPY --from=alpine-src --chmod=$CHMOD /entrypoint.sh /
+COPY --from=alpine-src /localtime /etc/
+COPY --from=alpine-src --chown=$CHOWN /nginx.conf /etc/nginx/
+COPY --from=alpine-src --chown=$CHOWN /40x.html /var/lib/nginx/html/
+
+RUN <<EOF
+  set -euo pipefail
   apk --cache=no upgrade
   apk --cache=no add nginx tini
-  wget -qP / "$ENTRYPOINT_URL"
-  wget -qP /etc/nginx "$NGINX_CONF_URL"
-  wget -qP /var/lib/nginx/html "$NGINX_40X_HTML_URL"
   mkdir -p /app /run/nginx /var/lib/nginx/tmp /var/log/nginx
   chown -R $CHOWN /app /etc/nginx /run/nginx /var/lib/nginx /var/log/nginx
 EOF
