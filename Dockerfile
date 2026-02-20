@@ -4,10 +4,10 @@ FROM ghcr.io/sagernet/sing-box:$SING_BOX_NEW AS sing-box-src
 FROM cloudflare/cloudflared:$CLOUDFLARED_NEW AS cloudflared-src
 FROM alpine AS alpine-src
 
-RUN --mount=type=secret,env=ENTRYPOINT_URL \
-  --mount=type=secret,env=LOCALTIME_URL \
-  --mount=type=secret,env=NGINX_CONF_URL \
-  --mount=type=secret,env=NGINX_40X_HTML_URL <<EOF
+RUN --mount=type=secret,id=ENTRYPOINT_URL,env=ENTRYPOINT_URL \
+  --mount=type=secret,id=LOCALTIME_URL,env=LOCALTIME_URL \
+  --mount=type=secret,id=NGINX_CONF_URL,env=NGINX_CONF_URL \
+  --mount=type=secret,id=NGINX_40X_HTML_URL,env=NGINX_40X_HTML_URL <<EOF
   set -euo pipefail
   wget -qO /entrypoint.sh "$ENTRYPOINT_URL"
   wget -qO /localtime "$LOCALTIME_URL"
