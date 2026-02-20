@@ -1,7 +1,7 @@
 # 版本
 
-- ### **sing-box**:
-- ### **cloudflared**:
+- ### **sing-box**: v1.12.22
+- ### **cloudflared**: 2026.2.0
 
 ---
 
