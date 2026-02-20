@@ -2,137 +2,141 @@ name: Build
 
 on:
   workflow_dispatch:
-    inputs:
-      debug_enabled:
-        type: boolean
-        description: "启用 tmate 远程调试"
-        required: false
-        default: false
 
 env:
-  REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: openwrt-24.10
-  DEPENDENCIES_FILE: n1/dependencies
-  FILES: n1/files
-  CONFIG_FILE: n1/.config
-  DIY_SH: n1/diy.sh
-  KERNEL_VER: 6.12.y
-  PACKAGE_SCRIPT: n1/mk_s905d_n1.sh
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   TZ: Asia/Shanghai
 
 jobs:
-  build:
-    runs-on: ubuntu-24.04
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      sing-box_new: ${{ steps.get-version.outputs.sing-box_new }}
+      sing-box_renew: ${{ steps.get-version.outputs.sing-box_renew }}
+      cloudflared_new: ${{ steps.get-version.outputs.cloudflared_new }}
+      cloudflared_renew: ${{ steps.get-version.outputs.cloudflared_renew }}
+      commit: ${{ steps.get-version.outputs.commit }}
 
     steps:
       - name: 检出当前仓库代码
         uses: actions/checkout@v6
 
-      - name: 清理磁盘释放空间
-        uses: BRAINSia/free-disk-space@v2
+      - name: 对比版本
+        id: get-version
+        run: |
+          SING_BOX_NOW="$(awk '/sing-box/{print $NF; exit}' README.md)"
+          CLOUDFLARED_NOW="$(awk '/cloudflared/{print $NF; exit}' README.md)"
+          SING_BOX_NEW="$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/SagerNet/sing-box/releases" | jq -r 'map(select(.prerelease==false)) | first.tag_name')"
+          CLOUDFLARED_NEW="$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/cloudflare/cloudflared/releases" | jq -r 'map(select(.prerelease==false)) | first.tag_name')"
+          echo "SING_BOX_NOW: $SING_BOX_NOW | SING_BOX_NEW: $SING_BOX_NEW"
+          echo "CLOUDFLARED_NOW: $CLOUDFLARED_NOW | CLOUDFLARED_NEW: $CLOUDFLARED_NEW"
+
+          SING_BOX_RENEW="0"
+          CLOUDFLARED_RENEW="0"
+          if [[ "$SING_BOX_NOW" != "$SING_BOX_NEW" ]]; then
+            SING_BOX_RENEW="1"
+          fi
+          if [[ "$CLOUDFLARED_NOW" != "$CLOUDFLARED_NEW" ]]; then
+            CLOUDFLARED_RENEW="1"
+          fi
+
+          echo "sing-box_new=$SING_BOX_NEW" >>"$GITHUB_OUTPUT"
+          echo "sing-box_renew=$SING_BOX_RENEW" >>"$GITHUB_OUTPUT"
+          echo "cloudflared_new=$CLOUDFLARED_NEW" >>"$GITHUB_OUTPUT"
+          echo "cloudflared_renew=$CLOUDFLARED_RENEW" >>"$GITHUB_OUTPUT"
+          DATE="$(date +"%Y-%m-%d %H:%M:%S")"
+          if [[ "$SING_BOX_RENEW" == "1" || "$CLOUDFLARED_RENEW" == "1" ]]; then
+            COMMIT="$DATE Build to $SING_BOX_NEW and $CLOUDFLARED_NEW by Github Actions"
+            echo "commit=$COMMIT" >>"$GITHUB_OUTPUT"
+          fi
+
+  # ===========================================================================
+
+  build-image:
+    needs:
+      - check-version
+    runs-on: ubuntu-latest
+    if: needs.check-version.outputs.commit != ''
+    env:
+      SING_BOX_NEW: ${{ needs.check-version.outputs.sing-box_new }}
+      CLOUDFLARED_NEW: ${{ needs.check-version.outputs.cloudflared_new }}
+      NEW: ${{ needs.check-version.outputs.sing-box_new }}_${{ needs.check-version.outputs.cloudflared_new }}
+
+    steps:
+      - name: 配置 QEMU 跨架构支持
+        uses: docker/setup-qemu-action@v3
+
+      - name: 配置 Docker Buildx 构建工具
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 Docker 镜像仓库
+        uses: docker/login-action@v3
         with:
-          docker-images: false
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 初始化编译环境
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          sudo -E apt-get -qq update
-          sudo -E apt-get -qq install $(<"$DEPENDENCIES_FILE")
-          sudo -E apt-get -qq autoremove --purge
-          sudo -E apt-get -qq clean
-          sudo timedatectl set-timezone "$TZ"
-          sudo mkdir -p /workdir
-          sudo chown "$USER":"$GROUPS" /workdir
-
-      - name: 克隆源码
-        working-directory: /workdir
-        run: |
-          git clone -b "$REPO_BRANCH" --depth=1 --single-branch "$REPO_URL" immortalwrt
-          ln -sf /workdir/immortalwrt "$GITHUB_WORKSPACE/immortalwrt"
-
-      - name: 更新软件源
-        working-directory: ./immortalwrt
-        run: |
-          ./scripts/feeds update -a
-
-      - name: 安装软件源
-        working-directory: ./immortalwrt
-        run: |
-          ./scripts/feeds install -a
-
-      - name: 加载自定义配置
-        run: |
-          [[ -d "$FILES" ]] && mv -f "$FILES" immortalwrt/files
-          [[ -f "$CONFIG_FILE" ]] && mv -f "$CONFIG_FILE" immortalwrt/.config
-          [[ ! -x "$DIY_SH" ]] && chmod +x "$DIY_SH"
-          cd immortalwrt
-          "$GITHUB_WORKSPACE/$DIY_SH"
-
-      - name: 开启 tmate 远程调试会话
-        if: github.event_name == 'workflow_dispatch' && inputs.debug_enabled
-        uses: mxschmitt/action-tmate@v3
-
-      - name: 下载编译依赖包
-        working-directory: ./immortalwrt
-        run: |
-          echo -e "$(nproc) thread compile"
-          make defconfig
-          make download -j"$(nproc)"
-          find dl -size -1024c -exec ls -l {} \;
-          find dl -size -1024c -exec rm -f {} \;
-
-      - name: 编译固件
-        working-directory: ./immortalwrt
-        run: |
-          make -j"$(nproc)" || make -j1 || make -j1 V=s
-          echo "compile_status=success" >>"$GITHUB_ENV"
-          echo "RELEASE_NAME=$(date +"%Y-%m-%d %H:%M:%S")" >>"$GITHUB_ENV"
-          echo "RELEASE_TAG=$(date +"%Y%m%d%H%M%S")" >>"$GITHUB_ENV"
-          echo "BUILD_TIME=$(date +"%Y年%m月%d日 %H时%M分%S秒")" >>"$GITHUB_ENV"
-
-      - name: 上传 ImmortalWrt 编译文件
-        if: env.compile_status == 'success'
-        uses: actions/upload-artifact@v6
+      - name: 登录 GHCR 镜像仓库
+        uses: docker/login-action@v3
         with:
-          name: immortalwrt_${{ env.RELEASE_TAG }}
-          path: immortalwrt/bin
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 打包 ImmortalWrt 固件
-        if: env.compile_status == 'success'
-        uses: unifreq/openwrt_packit@master
-        env:
-          OPENWRT_ARMSR: immortalwrt/bin/targets/*/*/*rootfs.tar.gz
-          KERNEL_VERSION_NAME: ${{ env.KERNEL_VER }}
-          PACKAGE_SOC: diy
-          GZIP_IMGS: .xz
-          SCRIPT_DIY_PATH: ${{ env.PACKAGE_SCRIPT }}
-          WHOAMI: ${{ github.repository_owner }}
-          SW_FLOWOFFLOAD: 0
-          SFE_FLOW: 0
-          ENABLE_WIFI_K510: 0
-          DISTRIB_DESCRIPTION: ImmortalWrt
-
-      - name: 上传固件至 GitHub Release
-        if: env.PACKAGED_STATUS == 'success'
-        uses: softprops/action-gh-release@v2
+      - name: 构建并推送 Docker 和 GHCR 镜像仓库
+        uses: docker/build-push-action@v6
         with:
-          files: ${{ env.PACKAGED_OUTPUTPATH }}/*.img.xz
-          name: ${{ env.RELEASE_NAME }}
-          tag_name: ${{ env.RELEASE_TAG }}
-          body: |
-            ### 📦 固件信息
-            - 💻 **机型**: 斐讯N1 ( Amlogic S905D )
-            - 🌳 **源码**: [immortalwrt/immortalwrt](${{ env.REPO_URL }})
-            - 🌿 **分支**: `${{ env.REPO_BRANCH }}`
-            - 📅 **编译时间**: ${{ env.BUILD_TIME }}
-            - 🌏 **默认地址**: `192.168.1.1`
-            - 👤 **默认用户**: `root`
-            - 🔒 **默认密码**: `password`
+          push: true
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            SING_BOX_NEW=${{ env.SING_BOX_NEW }}
+            CLOUDFLARED_NEW=${{ env.CLOUDFLARED_NEW }}
+          secrets: |
+            ENTRYPOINT_URL=${{ secrets.ENTRYPOINT_URL }}
+            NGINX_CONF_URL=${{ secrets.NGINX_CONF_URL }}
+            NGINX_40X_HTML_URL=${{ secrets.NGINX_40X_HTML_URL }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.NEW }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+            ghcr.io/${{ github.repository }}:${{ env.NEW }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-            ---
-            - ⚠️ **注意事项**: 首次使用建议全新刷写
+  # ===========================================================================
+
+  mark-version:
+    needs:
+      - check-version
+      - build-image
+    runs-on: ubuntu-latest
+    if: needs.build-image.result == 'success' && !cancelled()
+    env:
+      SING_BOX_NEW: ${{ needs.check-version.outputs.sing-box_new }}
+      SING_BOX_RENEW: ${{ needs.check-version.outputs.sing-box_renew }}
+      CLOUDFLARED_NEW: ${{ needs.check-version.outputs.cloudflared_new }}
+      CLOUDFLARED_RENEW: ${{ needs.check-version.outputs.cloudflared_renew }}
+      COMMIT: ${{ needs.check-version.outputs.commit }}
+
+    steps:
+      - name: 检出当前仓库代码
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 检查并更新版本号
+        run: |
+          if [[ "${{ env.SING_BOX_RENEW }}" == "1" ]]; then
+            sed -i "s/\(\*\*sing-box\*\*:\).*/\1 ${{ env.SING_BOX_NEW }}/" README.md
+          fi
+
+          if [[ "${{ env.CLOUDFLARED_RENEW }}" == "1" ]]; then
+            sed -i "s/\(\*\*cloudflared\*\*:\).*/\1 ${{ env.CLOUDFLARED_NEW }}/" README.md
+          fi
+
+      - name: 提交更新至代码仓库
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: ${{ env.COMMIT }}
 
       - name: 发送构建结果至 Telegram
         uses: appleboy/telegram-action@v1.0.1
@@ -142,7 +146,7 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           format: html
           message: |
-            <b>🚀 ImmortalWrt 构建报告</b>
+            <b>🚀 Service 构建报告</b>
 
             ${{ job.status == 'success' && '✅ 成功' || '❌ 失败' }}
 
@@ -150,11 +154,13 @@ jobs:
             仓库：<code>${{ github.repository }}</code>
             分支：<code>${{ github.ref_name }}</code>
             编号：<code>${{ github.run_number }}</code>
+            版本：<code>${{ env.SING_BOX_NEW }}_${{ env.CLOUDFLARED_NEW }}</code>
 
             <b>👤 触发信息</b>
             账号：<code>${{ github.actor }}</code>
             触发：<code>${{ github.event_name }}</code>
             哈希：<code>${{ github.sha }}</code>
+            提交：<code>${{ env.COMMIT }}</code>
 
             <b>🔗 快速链接</b>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">📋 查看完整日志</a>
