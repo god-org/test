@@ -1,4 +1,7 @@
-ARG SING_BOX_NEW=latest CLOUDFLARED_NEW=latest
+# syntax=docker/dockerfile:1
+
+ARG SING_BOX_NEW=latest
+ARG CLOUDFLARED_NEW=latest
 
 FROM ghcr.io/sagernet/sing-box:$SING_BOX_NEW AS sing-box-src
 FROM cloudflare/cloudflared:$CLOUDFLARED_NEW AS cloudflared-src
@@ -17,14 +20,18 @@ EOF
 
 FROM alpine
 
-ARG CHMOD=755 CHOWN=1000 NGINX_PORT=8080
+ARG CHMOD=755
+ARG CHOWN=1000
+ARG NGINX_PORT=8080
 
-COPY --from=sing-box-src --chmod=$CHMOD /usr/local/bin/sing-box /usr/local/bin/
-COPY --from=cloudflared-src --chmod=$CHMOD /usr/local/bin/cloudflared /usr/local/bin/
-COPY --from=alpine-src --chmod=$CHMOD /entrypoint.sh /
-COPY --from=alpine-src /localtime /etc/
-COPY --from=alpine-src --chown=$CHOWN /nginx.conf /etc/nginx/
-COPY --from=alpine-src --chown=$CHOWN /40x.html /var/lib/nginx/html/
+ENV NGINX_PORT=$NGINX_PORT
+
+COPY --from=sing-box-src --chmod=$CHMOD --link /usr/local/bin/sing-box /usr/local/bin/
+COPY --from=cloudflared-src --chmod=$CHMOD --link /usr/local/bin/cloudflared /usr/local/bin/
+COPY --from=alpine-src --chmod=$CHMOD --link /entrypoint.sh /
+COPY --from=alpine-src --link /localtime /etc/
+COPY --from=alpine-src --chown=$CHOWN --link /nginx.conf /etc/nginx/
+COPY --from=alpine-src --chown=$CHOWN --link /40x.html /var/lib/nginx/html/
 
 RUN <<EOF
   set -euo pipefail
@@ -40,6 +47,7 @@ USER $CHOWN
 
 EXPOSE $NGINX_PORT
 
-HEALTHCHECK CMD wget --spider -q "http://localhost:$NGINX_PORT/health" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --start-interval=5s --retries=3 \
+  CMD ["/bin/sh", "-c", "wget --spider -q http://localhost:$NGINX_PORT/health || exit 1"]
 
 ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]
